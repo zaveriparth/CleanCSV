@@ -2,8 +2,10 @@ name: Process CSV
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *'  # This runs the workflow every day at midnight
+    inputs:
+      csv_url:
+        description: 'URL to the CSV file'
+        required: true
 
 jobs:
   build:
@@ -21,17 +23,15 @@ jobs:
     - name: Install dependencies
       run: pip install pandas
 
+    - name: Download CSV
+      run: |
+        curl -o input.csv ${{ github.event.inputs.csv_url }}
+
     - name: Run Python script
-      env:
-        CSV_FILE_PATH: 'tempfile.csv'
       run: python process_csv.py
 
-    - name: Upload to SharePoint
-      env:
-        SHAREPOINT_URL: ${{ secrets.SHAREPOINT_URL }}
-        SHAREPOINT_USERNAME: ${{ secrets.SHAREPOINT_USERNAME }}
-        SHAREPOINT_PASSWORD: ${{ secrets.SHAREPOINT_PASSWORD }}
-      run: |
-        curl -X PUT -u $SHAREPOINT_USERNAME:$SHAREPOINT_PASSWORD \
-        --upload-file 'tempfile.csv' \
-        $SHAREPOINT_URL
+    - name: Upload modified CSV
+      uses: actions/upload-artifact@v2
+      with:
+        name: modified-csv
+        path: input.csv
